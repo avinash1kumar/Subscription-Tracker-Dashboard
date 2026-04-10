@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Calendar as CalendarIcon, ArrowRight, CreditCard, ExternalLink } from 'lucide-react';
 import gsap from 'gsap';
 import clsx from 'clsx';
 
 export const UpcomingTimeline = ({ upcomingBills }) => {
   const timelineRef = useRef(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     if (timelineRef.current) {
@@ -32,7 +33,11 @@ export const UpcomingTimeline = ({ upcomingBills }) => {
           const isToday = new Date().toDateString() === dateObj.toDateString();
           
           return (
-            <div key={`${bill.id}-timeline`} className="mb-6 relative group">
+            <div 
+              key={`${bill.id}-timeline`} 
+              className="mb-8 relative group cursor-pointer"
+              onClick={() => setExpandedId(expandedId === bill.id ? null : bill.id)}
+              >
               {/* Timeline Dot */}
               <div className={clsx(
                 "absolute -left-[21px] w-3 h-3 rounded-full border-2 border-dark-800",
@@ -55,7 +60,29 @@ export const UpcomingTimeline = ({ upcomingBills }) => {
                     {bill.billingCycle}
                   </div>
                 </div>
-              </div>
+                </div>
+
+              {/* Expanded Timeline Details */}
+              {expandedId === bill.id && (
+                <div className="mt-4 bg-dark-800/80 p-4 rounded-lg text-sm border border-dark-700/50 origin-top animate-in slide-in-from-top-2 duration-300 shadow-inner">
+                  <div className="space-y-3">
+                     <div className="flex justify-between items-center text-slate-300">
+                        <span className="flex items-center gap-2"><CreditCard size={14} className="text-slate-400"/> Payment Method</span>
+                        <span className="font-medium text-slate-200">Visa •••• 4242</span>
+                     </div>
+                     <div className="flex justify-between items-center text-slate-300">
+                        <span className="flex items-center gap-2">Category</span>
+                        <span className="text-slate-200">{bill.category}</span>
+                     </div>
+                     <div className="pt-3 flex justify-end gap-3 border-t border-dark-700/50 mt-3">
+                        <button className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">Skip</button>
+                        <button className="px-4 py-1.5 text-xs font-medium bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20 rounded flex items-center gap-1.5 transition-colors border border-brand-blue/20">
+                          <ExternalLink size={12}/> View Invoice
+                        </button>
+                     </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

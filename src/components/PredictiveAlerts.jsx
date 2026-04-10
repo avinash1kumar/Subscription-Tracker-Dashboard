@@ -6,6 +6,7 @@ import clsx from 'clsx';
 export const PredictiveAlerts = ({ alerts: initialAlerts }) => {
   const containerRef = useRef(null);
   const [alerts, setAlerts] = useState(initialAlerts);
+  const [expandedAlert, setExpandedAlert] = useState(null);
 
   useEffect(() => {
     if (containerRef.current && alerts.length > 0) {
@@ -14,7 +15,7 @@ export const PredictiveAlerts = ({ alerts: initialAlerts }) => {
         { opacity: 1, x: 0, duration: 0.4, stagger: 0.15, ease: "power2.out", delay: 0.6 }
       );
     }
-  }, [alerts.length]);
+  }, []);
 
   const dismissAlert = (id) => {
     // Animate out
@@ -76,10 +77,13 @@ export const PredictiveAlerts = ({ alerts: initialAlerts }) => {
                   
                   {alert.type === 'price_creep' && (
                     <div className="mt-3 flex gap-2">
-                      <button className="px-3 py-1 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-md text-xs font-medium transition-colors">
-                        Review Plan
+                      <button 
+                        onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}
+                        className="px-3 py-1 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-md text-xs font-medium transition-colors"
+                      >
+                        {expandedAlert === alert.id ? 'Hide Details' : 'Review Plan'}
                       </button>
-                      <button className="px-3 py-1 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-md text-xs font-medium transition-colors shadow-lg shadow-brand-blue/20">
+                      <button onClick={() => dismissAlert(alert.id)} className="px-3 py-1 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-md text-xs font-medium transition-colors shadow-lg shadow-brand-blue/20">
                         Accept Cost
                       </button>
                     </div>
@@ -93,6 +97,26 @@ export const PredictiveAlerts = ({ alerts: initialAlerts }) => {
                 <X size={16} />
               </button>
             </div>
+
+            {/* Expanded Content View */}
+            {expandedAlert === alert.id && (
+              <div className="mt-3 pt-3 border-t border-dark-700/50 origin-top animate-in slide-in-from-top-2 duration-300">
+                <p className="text-xs text-slate-300 mb-3 leading-relaxed">This service has steadily increased in price over the last year. Choose an action below or evaluate lower tier plans to reduce your burn rate.</p>
+                <div className="grid grid-cols-2 gap-2">
+                   <div 
+                     onClick={() => dismissAlert(alert.id)}
+                     className="bg-dark-800/80 p-2.5 text-center rounded-lg border border-brand-rose/20 cursor-pointer hover:bg-dark-700 transition"
+                   >
+                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Cancel Plan</span>
+                     <span className="block text-sm font-medium text-brand-rose mt-1">Delete Subscription</span>
+                   </div>
+                   <div className="bg-dark-800/80 p-2.5 text-center rounded-lg border border-dark-700 cursor-pointer hover:bg-dark-700 transition">
+                     <span className="block text-[10px] text-slate-400 uppercase tracking-wider">Downgrade</span>
+                     <span className="block text-sm font-medium text-slate-200 mt-1">View Basic Tier</span>
+                   </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

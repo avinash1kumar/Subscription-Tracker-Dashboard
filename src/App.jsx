@@ -99,7 +99,7 @@ function App() {
                 {/* 2-Column Row for Analytics and Timeline */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="h-[400px] lg:h-auto lg:min-h-[400px]">
-                    <CostAnalytics categoryData={categoryData} />
+                    <CostAnalytics categoryData={categoryData} subscriptions={mockSubscriptions} />
                   </div>
                   <div className="h-[400px] lg:h-auto lg:min-h-[400px]">
                     <UpcomingTimeline upcomingBills={upcomingBills} />

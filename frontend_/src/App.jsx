@@ -5,15 +5,21 @@ import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import BackgroundOrbs from './components/BackgroundOrbs'
 import AddModal from './components/AddModal'
-import Dashboard from './pages/Dashboard'
-import Income from './pages/Income'
-import Expenses from './pages/Expenses'
-import AuthPage from './pages/AuthPage'
+import Dashboard      from './pages/Dashboard'
+import Income         from './pages/Income'
+import Expenses       from './pages/Expenses'
+import Subscriptions  from './pages/Subscriptions'
+import Notifications  from './pages/Notifications'
+import Settings       from './pages/Settings'
+import AuthPage       from './pages/AuthPage'
 
 const PAGE_COMPONENTS = {
-  dashboard: Dashboard,
-  income: Income,
-  expenses: Expenses,
+  dashboard:     Dashboard,
+  income:        Income,
+  expenses:      Expenses,
+  subscriptions: Subscriptions,
+  notifications: Notifications,
+  settings:      Settings,
 }
 
 // Full-screen loading spinner shown while checking saved session

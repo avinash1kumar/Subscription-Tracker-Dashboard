@@ -23,7 +23,7 @@ export const CATEGORY_COLORS = {
   Design: '#f59e0b',
   Health: '#10b981',
   Professional: '#3b82f6',
-  Salary: '#38ef7d',
+  Salary: '#280660ff',
   Freelance: '#06b6d4',
   Passive: '#f59e0b',
   Investment: '#a855f7',

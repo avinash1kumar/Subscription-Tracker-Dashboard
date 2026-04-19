@@ -11,12 +11,12 @@ const incomeRoutes = require('./routes/incomeRoutes')
 const expenseRoutes = require('./routes/expenseRoutes')
 const { errorHandler, notFound } = require('./middleware/errorHandler')
 
-//Connect Database 
+// ─── Connect Database ─────────────────────────────────────────────────────────
 connectDB()
 
 const app = express()
 
-//Security Middleware 
+// ─── Security Middleware ──────────────────────────────────────────────────────
 app.use(helmet())
 
 // CORS
@@ -28,7 +28,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (Postman, curl, mobile)
-      if (!origin || origin.includes('localhost:517') || origin.includes('localhost:3000')) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true)
       } else {
         callback(new Error(`CORS blocked: ${origin}`))
@@ -59,16 +59,16 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/register', authLimiter)
 
-// Body Parsing 
+// ─── Body Parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
-// Logging 
+// ─── Logging ──────────────────────────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 }
 
-// Health Check 
+// ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -79,10 +79,12 @@ app.get('/health', (req, res) => {
   })
 })
 
-// API Routes 
-app.use('/api/auth', authRoutes)
-app.use('/api/income', incomeRoutes)
-app.use('/api/expenses', expenseRoutes)
+// ─── API Routes ───────────────────────────────────────────────────────────────
+const subscriptionRoutes = require('./routes/subscriptionRoutes')
+app.use('/api/auth',          authRoutes)
+app.use('/api/income',        incomeRoutes)
+app.use('/api/expenses',      expenseRoutes)
+app.use('/api/subscriptions', subscriptionRoutes)
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound)
@@ -94,10 +96,11 @@ const PORT = process.env.PORT || 5000
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log('')
-    console.log('SubFlow Backend')
-    console.log(`Server: http://localhost:${PORT}`)
-    console.log(`Health: http://localhost:${PORT}/health`)
-    console.log(`Environment: ${process.env.NODE_ENV}`)
+    console.log('  🚀 SubFlow Backend')
+    console.log(`  📡 Server     : http://localhost:${PORT}`)
+    console.log(`  💚 Health     : http://localhost:${PORT}/health`)
+    console.log(`  🌍 Environment: ${process.env.NODE_ENV}`)
+    console.log('  📋 Routes     : /api/auth | /api/income | /api/expenses | /api/subscriptions')
     console.log('')
   })
 }

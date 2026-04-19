@@ -98,8 +98,19 @@ export const authAPI = {
   },
 
   getProfile:     ()     => apiFetch('/auth/profile'),
-  updateProfile:  (data) => apiFetch('/auth/profile',         { method: 'PUT',  body: JSON.stringify(data) }),
-  changePassword: (data) => apiFetch('/auth/change-password', { method: 'PUT',  body: JSON.stringify(data) }),
+  updateProfile:  (data) => apiFetch('/auth/profile',         { method: 'PUT',    body: JSON.stringify(data) }),
+  changePassword: (data) => apiFetch('/auth/change-password', { method: 'PUT',    body: JSON.stringify(data) }),
+
+  // Preferences (appearance settings)
+  getPreferences:    ()     => apiFetch('/auth/preferences'),
+  updatePreferences: (data) => apiFetch('/auth/preferences',          { method: 'PUT',    body: JSON.stringify(data) }),
+
+  // Notification settings
+  getNotificationSettings:    ()     => apiFetch('/auth/notification-settings'),
+  updateNotificationSettings: (data) => apiFetch('/auth/notification-settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Account deletion
+  deleteAccount: (data) => apiFetch('/auth/account', { method: 'DELETE', body: JSON.stringify(data) }),
 }
 
 // ─── Income API ───────────────────────────────────────────────────────────────
@@ -122,4 +133,17 @@ export const expenseAPI = {
   cancel:       (id)          => apiFetch(`/expenses/${id}/cancel`, { method: 'PATCH' }),
   getAnalytics: ()            => apiFetch('/expenses/analytics'),
   getDashboard: ()            => apiFetch('/expenses/dashboard'),
+}
+
+// ─── Subscription API ─────────────────────────────────────────────────────────
+export const subscriptionAPI = {
+  getAll:       (params = {}) => apiFetch(`/subscriptions?${new URLSearchParams(params)}`),
+  getById:      (id)          => apiFetch(`/subscriptions/${id}`),
+  create:       (data)        => apiFetch('/subscriptions',        { method: 'POST',   body: JSON.stringify(data) }),
+  update:       (id, data)    => apiFetch(`/subscriptions/${id}`,  { method: 'PUT',    body: JSON.stringify(data) }),
+  delete:       (id)          => apiFetch(`/subscriptions/${id}`,  { method: 'DELETE' }),
+  toggleStatus: (id)          => apiFetch(`/subscriptions/${id}/toggle`, { method: 'PATCH' }),
+  bulkDelete:   (ids)         => apiFetch('/subscriptions/bulk',   { method: 'DELETE', body: JSON.stringify({ ids }) }),
+  getAnalytics: ()            => apiFetch('/subscriptions/analytics'),
+  getUpcoming:  (days = 7)    => apiFetch(`/subscriptions/upcoming?days=${days}`),
 }

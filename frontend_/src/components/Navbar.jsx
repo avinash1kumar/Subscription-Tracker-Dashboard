@@ -1,16 +1,28 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Menu, Bell, Search, Plus } from 'lucide-react'
+import { Menu, Bell, Plus } from 'lucide-react'
 import { useApp } from '../content/AppContext'
 
 const PAGE_TITLES = {
-  dashboard: { title: 'Dashboard', sub: 'Overview of your financial flow' },
-  income: { title: 'Income', sub: 'Track all your earnings' },
-  expenses: { title: 'Expenses', sub: 'Manage your subscriptions & spending' },
+  dashboard:     { title: 'Dashboard',     sub: 'Overview of your financial flow'       },
+  income:        { title: 'Income',         sub: 'Track all your earnings'               },
+  expenses:      { title: 'Expenses',       sub: 'Manage your spending'                  },
+  subscriptions: { title: 'Subscriptions', sub: 'Manage your recurring payments'        },
+  notifications: { title: 'Notifications', sub: 'Smart alerts from your financial data' },
+  settings:      { title: 'Settings',      sub: 'Manage your account and preferences'   },
 }
 
 export default function Navbar({ onMenuClick, onAddClick }) {
-  const { activePage } = useApp()
+  const { activePage, setActivePage, subscriptions } = useApp()
+
+  // Unread notification badge count — bills due within 7 days
+  const urgentCount = (subscriptions || []).filter(s => {
+    if (s.status !== 'active' || !s.nextBilling) return false
+    const today  = new Date(); today.setHours(0,0,0,0)
+    const bill   = new Date(s.nextBilling); bill.setHours(0,0,0,0)
+    const days   = Math.ceil((bill - today) / 86400000)
+    return days >= 0 && days <= 7
+  }).length
   const { title, sub } = PAGE_TITLES[activePage] || PAGE_TITLES.dashboard
 
   return (
@@ -41,18 +53,20 @@ export default function Navbar({ onMenuClick, onAddClick }) {
 
       {/* Right */}
       <div className="flex items-center gap-2">
-        {/* Search (decorative on mobile) */}
-        <div className="hidden sm:flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/40"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <Search size={14} />
-          <span className="text-xs">Search...</span>
-          <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono">⌘K</span>
-        </div>
-
         {/* Notifications */}
-        <button className="relative w-9 h-9 rounded-xl flex items-center justify-center btn-ghost">
+        <button 
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center btn-ghost"
+          onClick={() => setActivePage('notifications')}
+        >
           <Bell size={15} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500" />
+          {urgentCount > 0 && (
+            <span 
+              className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white" 
+              style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
+            >
+              {urgentCount}
+            </span>
+          )}
         </button>
 
         {/* Add button */}

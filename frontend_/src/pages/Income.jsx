@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import { Trash2, TrendingUp, DollarSign, Repeat, Star } from 'lucide-react'
 import { useApp } from '../content/AppContext'
@@ -59,15 +59,15 @@ export default function Income() {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={catData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => fmtShort(v)} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="name" tick={{ fill: 'rgba(255, 255, 255, 0.64)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={v => fmtShort(v)} tick={{ fill: 'rgba(255, 255, 255, 0.72)', fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip
                 formatter={(v) => [fmt(v), 'Amount']}
-                contentStyle={{ background: 'rgba(20,16,60,0.95)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
+                contentStyle={{ background: 'rgba(128, 125, 164, 0.95)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
               />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                 {catData.map((entry, i) => (
-                  <rect key={i} fill={CATEGORY_COLORS[entry.name] || '#6b7280'} />
+                  <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#1e422b42'} /> // ! to change the Bar color
                 ))}
               </Bar>
             </BarChart>

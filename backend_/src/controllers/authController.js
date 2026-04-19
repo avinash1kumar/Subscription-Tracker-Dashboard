@@ -167,6 +167,97 @@ const changePassword = async (req, res, next) => {
   }
 }
 
+// ─── Update Preferences (appearance / UI settings) ────────────────────────────
+const updatePreferences = async (req, res, next) => {
+  try {
+    const { compact, animations, showBalance, dateFormat } = req.body
+
+    // Build update object — only update fields that were sent
+    const update = {}
+    if (compact     !== undefined) update['preferences.compact']     = compact
+    if (animations  !== undefined) update['preferences.animations']  = animations
+    if (showBalance !== undefined) update['preferences.showBalance'] = showBalance
+    if (dateFormat  !== undefined) update['preferences.dateFormat']  = dateFormat
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true, runValidators: true }
+    )
+
+    return sendSuccess(res, { preferences: user.preferences }, 'Preferences updated.')
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ─── Get Notification Settings ────────────────────────────────────────────────
+const getNotificationSettings = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('notificationSettings')
+    return sendSuccess(res, { notificationSettings: user.notificationSettings }, 'Notification settings fetched.')
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ─── Update Notification Settings ────────────────────────────────────────────
+const updateNotificationSettings = async (req, res, next) => {
+  try {
+    const { billing, sevenDay, threeDay, overdue, insights, milestones } = req.body
+
+    const update = {}
+    if (billing    !== undefined) update['notificationSettings.billing']    = billing
+    if (sevenDay   !== undefined) update['notificationSettings.sevenDay']   = sevenDay
+    if (threeDay   !== undefined) update['notificationSettings.threeDay']   = threeDay
+    if (overdue    !== undefined) update['notificationSettings.overdue']    = overdue
+    if (insights   !== undefined) update['notificationSettings.insights']   = insights
+    if (milestones !== undefined) update['notificationSettings.milestones'] = milestones
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true, runValidators: true }
+    )
+
+    return sendSuccess(
+      res,
+      { notificationSettings: user.notificationSettings },
+      'Notification settings updated.'
+    )
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ─── Delete Account ───────────────────────────────────────────────────────────
+const deleteAccount = async (req, res, next) => {
+  try {
+    const { password } = req.body
+    if (!password) return sendError(res, 'Password is required to delete account.', 400)
+
+    const user = await User.findById(req.user._id).select('+password')
+    const isMatch = await user.comparePassword(password)
+    if (!isMatch) return sendError(res, 'Incorrect password.', 401)
+
+    // Delete all user data from all collections
+    const Income       = require('../models/Income')
+    const Expense      = require('../models/Expense')
+    const Subscription = require('../models/Subscription')
+
+    await Promise.all([
+      Income.deleteMany({ user: req.user._id }),
+      Expense.deleteMany({ user: req.user._id }),
+      Subscription.deleteMany({ user: req.user._id }),
+      User.findByIdAndDelete(req.user._id),
+    ])
+
+    return sendSuccess(res, {}, 'Account and all data deleted successfully.')
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -175,4 +266,8 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  updatePreferences,
+  getNotificationSettings,
+  updateNotificationSettings,
+  deleteAccount,
 }

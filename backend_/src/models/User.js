@@ -33,6 +33,25 @@ const userSchema = new mongoose.Schema(
       default: 'INR',
       enum: ['INR', 'USD', 'EUR', 'GBP'],
     },
+
+    // ── Notification preferences (persisted in DB) ───────────────────────────
+    notificationSettings: {
+      billing:    { type: Boolean, default: true },
+      sevenDay:   { type: Boolean, default: true },
+      threeDay:   { type: Boolean, default: true },
+      overdue:    { type: Boolean, default: true },
+      insights:   { type: Boolean, default: true },
+      milestones: { type: Boolean, default: true },
+    },
+
+    // ── App preferences (persisted in DB) ───────────────────────────────────
+    preferences: {
+      compact:     { type: Boolean, default: false },
+      animations:  { type: Boolean, default: true  },
+      showBalance: { type: Boolean, default: true  },
+      dateFormat:  { type: String,  default: 'en-IN', enum: ['en-IN', 'en-US', 'en-GB'] },
+    },
+
     refreshToken: {
       type: String,
       select: false,

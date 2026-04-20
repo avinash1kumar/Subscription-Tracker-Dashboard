@@ -18,6 +18,20 @@ export function AppProvider({ children }) {
   // ─── UI State ───────────────────────────────────────────────────────────────
   const [activePage, setActivePage] = useState('dashboard')
 
+  // ─── Notification global states ──────────────────────────────────────────────
+  const [notifsRead, setNotifsRead] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('notifs_read') || '[]')) } 
+    catch { return new Set() }
+  })
+  const [notifsDeleted, setNotifsDeleted] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('notifs_deleted') || '[]')) } 
+    catch { return new Set() }
+  })
+
+  useEffect(() => { localStorage.setItem('notifs_read', JSON.stringify([...notifsRead])) }, [notifsRead])
+  useEffect(() => { localStorage.setItem('notifs_deleted', JSON.stringify([...notifsDeleted])) }, [notifsDeleted])
+
+
   // ─── On Mount: restore session if token exists ───────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
@@ -165,7 +179,7 @@ export function AppProvider({ children }) {
 
   // ─── Derived Values ───────────────────────────────────────────────────────────
   const totalIncome   = income.reduce((sum, i) => sum + i.amount, 0)
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalExpenses = expenses.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.amount, 0)
   const balance       = totalIncome - totalExpenses
   const savingsRate   = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : 0
 
@@ -185,6 +199,8 @@ export function AppProvider({ children }) {
       fetchIncome, fetchExpenses,
       // UI
       activePage, setActivePage,
+      // Notifications
+      notifsRead, setNotifsRead, notifsDeleted, setNotifsDeleted,
       // Derived
       totalIncome, totalExpenses, balance, savingsRate,
     }}>

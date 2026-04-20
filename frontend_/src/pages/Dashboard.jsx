@@ -10,18 +10,9 @@ import {
 } from 'lucide-react'
 import { useApp } from '../content/AppContext'
 import StatCard from '../components/StatCard'
-import { fmt, fmtShort, getDaysUntil, CATEGORY_COLORS } from '../utils/helpers'
+import { fmt, fmtShort, getDaysUntil, CATEGORY_COLORS, formatDate } from '../utils/helpers'
 import clsx from 'clsx'
 
-const MONTHLY_DATA = [
-  { month: 'Oct', income: 180000, expense: 42000 },
-  { month: 'Nov', income: 195000, expense: 38000 },
-  { month: 'Dec', income: 210000, expense: 55000 },
-  { month: 'Jan', income: 200000, expense: 48000 },
-  { month: 'Feb', income: 185000, expense: 41000 },
-  { month: 'Mar', income: 220000, expense: 46000 },
-  { month: 'Apr', income: 225800, expense: 15527 },
-]
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -41,11 +32,40 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function Dashboard() {
-  const { income, expenses, totalIncome, totalExpenses, balance, savingsRate } = useApp()
+  const { income, expenses, savingsRate } = useApp()
+
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+
+  const currentMonthIncome = income.filter(i => {
+    const d = new Date(i.date)
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  }).reduce((s, i) => s + i.amount, 0)
+
+  const currentMonthExpenses = expenses.filter(e => {
+    if (e.status !== 'Paid') return false
+    const d = new Date(e.date)
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  }).reduce((s, e) => s + e.amount, 0)
+
+  const currentMonthBalance = currentMonthIncome - currentMonthExpenses
+
+  const dynamicMonthlyData = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - (6 - i))
+    const m = d.getMonth()
+    const y = d.getFullYear()
+    
+    const mIncome = income.filter(inc => new Date(inc.date).getMonth() === m && new Date(inc.date).getFullYear() === y).reduce((s, inc) => s + inc.amount, 0)
+    const mExpense = expenses.filter(exp => exp.status === 'Paid' && new Date(exp.date).getMonth() === m && new Date(exp.date).getFullYear() === y).reduce((s, exp) => s + exp.amount, 0)
+    
+    return { month: d.toLocaleString('en-US', { month: 'short' }), income: mIncome, expense: mExpense }
+  })
 
   const upcoming = expenses
-    .filter(e => e.nextBilling)
-    .map(e => ({ ...e, days: getDaysUntil(e.nextBilling) }))
+    .filter(e => e.status === 'Planned' && getDaysUntil(e.date) >= 0)
+    .map(e => ({ ...e, days: getDaysUntil(e.date) }))
     .sort((a, b) => a.days - b.days)
     .slice(0, 4)
 
@@ -58,16 +78,16 @@ export default function Dashboard() {
   const recentAll = [
     ...income.map(i => ({ ...i, type: 'income' })),
     ...expenses.map(e => ({ ...e, type: 'expense' })),
-  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
+  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50)
 
   return (
     <div className="space-y-6">
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          title="Total Income"
-          value={fmtShort(totalIncome)}
-          sub={`${income.length} sources`}
+          title="Total Income (This Month)"
+          value={fmtShort(currentMonthIncome)}
+          sub={`${income.filter(i => new Date(i.date).getMonth() === currentMonth).length} sources via current period`}
           icon={TrendingUp}
           gradient="linear-gradient(135deg, rgba(17,153,142,0.5) 0%, rgba(56,239,125,0.3) 100%)"
           trend="up"
@@ -75,9 +95,9 @@ export default function Dashboard() {
           delay={0}
         />
         <StatCard
-          title="Total Expenses"
-          value={fmtShort(totalExpenses)}
-          sub={`${expenses.length} subscriptions`}
+          title="Total Expenses (This Month)"
+          value={fmtShort(currentMonthExpenses)}
+          sub="Paid expenditures only"
           icon={TrendingDown}
           gradient="linear-gradient(135deg, rgba(247,151,30,0.4) 0%, rgba(255,107,107,0.35) 100%)"
           trend="down"
@@ -86,13 +106,14 @@ export default function Dashboard() {
         />
         <StatCard
           title="Net Balance"
-          value={fmtShort(Math.abs(balance))}
-          sub={balance >= 0 ? "You're in profit 🎉" : "Overspending ⚠️"}
+          value={fmt(Math.abs(currentMonthBalance))}
+          sub={currentMonthBalance >= 0 ? "You're in profit 🎉" : "Overspending ⚠️"}
           icon={Wallet}
           gradient="linear-gradient(135deg, rgba(121,40,202,0.5) 0%, rgba(255,0,128,0.35) 100%)"
           trend="up"
           trendValue="+8.1%"
           delay={0.16}
+          tooltip="Calculated as: Total Income - Paid Expenses (Excludes Planned)"
         />
         <StatCard
           title="Savings Rate"
@@ -132,7 +153,7 @@ export default function Dashboard() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={MONTHLY_DATA} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+            <AreaChart data={dynamicMonthlyData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#38ef7d" stopOpacity={0.3} />
@@ -173,10 +194,10 @@ export default function Dashboard() {
                     <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#6b7280'} stroke="transparent" />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => [fmt(v), '']} contentStyle={{
-                  background: 'rgba(20,16,60,0.95)', border: '1px solid rgba(255,255,255,0.12)',
+                <Tooltip formatter={(value, name) => [fmt(value), name]} contentStyle={{
+                  background: '#18181b', color: '#fff', border: '1px solid #3f3f46',
                   borderRadius: 12, fontSize: 12, fontFamily: 'DM Sans'
-                }} />
+                }} itemStyle={{ color: '#fff' }} wrapperStyle={{ zIndex: 9999 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -210,7 +231,7 @@ export default function Dashboard() {
               <p className="text-white/40 text-xs">Latest activity</p>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
             {recentAll.map((t, i) => (
               <motion.div key={t.id}
                 className="flex items-center gap-3 p-3 rounded-2xl table-row-hover"
@@ -224,7 +245,9 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{t.name}</div>
-                  <div className="text-xs text-white/40">{t.category} · {t.date}</div>
+                  <div className="text-xs text-white/40">
+                    {t.category} · {getDaysUntil(t.date) === 0 ? 'Today' : formatDate(t.date)}
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className={clsx('text-sm font-bold font-mono', t.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>
@@ -248,12 +271,17 @@ export default function Dashboard() {
             <Calendar size={16} className="text-purple-400" />
             <div>
               <h3 className="font-display font-bold text-white text-base">Upcoming Bills</h3>
-              <p className="text-white/40 text-xs">Next billing dates</p>
+              <p className="text-white/40 text-xs">Upcoming planned expenses</p>
             </div>
           </div>
           <div className="space-y-3">
             {upcoming.length === 0 ? (
-              <div className="text-center py-8 text-white/30 text-sm">No upcoming bills tracked</div>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-3">
+                  <Calendar size={18} className="text-white/20" />
+                </div>
+                <p className="text-white/40 text-xs">No upcoming bills</p>
+              </div>
             ) : upcoming.map((e, i) => {
               const cls = e.days <= 3 ? 'text-rose-400' : e.days <= 7 ? 'text-amber-400' : 'text-emerald-400'
               const bg = e.days <= 3 ? 'rgba(239,68,68,0.15)' : e.days <= 7 ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.1)'
@@ -268,7 +296,7 @@ export default function Dashboard() {
                   <div className="text-xl">{e.emoji}</div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-white">{e.name}</div>
-                    <div className="text-xs text-white/40">{e.nextBilling}</div>
+                    <div className="text-xs text-white/40">{formatDate(e.date)}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold font-mono text-white">{fmt(e.amount)}</div>

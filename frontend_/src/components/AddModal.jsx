@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus } from 'lucide-react'
 import { useApp } from '../content/AppContext'
@@ -12,13 +13,20 @@ export default function AddModal({ open, onClose }) {
   const [type, setType] = useState('expense')
   const [form, setForm] = useState({
     name: '', amount: '', category: '', date: new Date().toISOString().split('T')[0],
-    cycle: 'monthly', emoji: '💳', nextBilling: '',
+    cycle: 'one-time', emoji: '💳', nextBilling: '', status: 'Paid',
   })
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (type === 'income' && form.category) {
+      const iconMap = { Salary: '💼', Freelance: '💻', Passive: '📈', Investment: '💰', Business: '🏢', Other: '💵' }
+      if (iconMap[form.category]) set('emoji', iconMap[form.category])
+    }
+  }, [form.category, type])
 
   const validate = () => {
     const e = {}
@@ -39,16 +47,16 @@ export default function AddModal({ open, onClose }) {
         amount: Number(form.amount),
         category: form.category,
         date: form.date,
-        cycle: form.cycle,
+        cycle: form.cycle || 'one-time',
         emoji: form.emoji,
-        ...(type === 'expense' && { nextBilling: form.nextBilling || form.date }),
+        ...(type === 'expense' && { status: form.status }),
       }
       if (type === 'income') {
         await addIncome(entry)
       } else {
         await addExpense(entry)
       }
-      setForm({ name: '', amount: '', category: '', date: new Date().toISOString().split('T')[0], cycle: 'monthly', emoji: '💳', nextBilling: '' })
+      setForm({ name: '', amount: '', category: '', date: new Date().toISOString().split('T')[0], cycle: 'one-time', emoji: '💳', nextBilling: '', status: 'Paid' })
       setErrors({})
       onClose()
     } catch (err) {
@@ -60,32 +68,32 @@ export default function AddModal({ open, onClose }) {
 
   const cats = type === 'income' ? CATEGORIES_INCOME : CATEGORIES_EXPENSE
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="modal-backdrop"
+          className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-[9999]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={e => e.target === e.currentTarget && onClose()}
         >
           <motion.div
-            className="modal-content"
+            className="modal-content relative w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6 md:p-8"
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
+            {/* Absolute Close Button */}
+            <button onClick={onClose} className="absolute top-4 right-4 z-50 w-8 h-8 rounded-xl flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
+              <X size={15} />
+            </button>
+
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-display font-bold text-white text-xl">Add Entry</h2>
-                <p className="text-white/40 text-xs mt-0.5">Track a new transaction</p>
-              </div>
-              <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center btn-ghost">
-                <X size={15} />
-              </button>
+            <div className="mb-6 pr-8">
+              <h2 className="font-display font-bold text-white text-xl">Add Entry</h2>
+              <p className="text-white/40 text-xs mt-0.5">Track a new transaction</p>
             </div>
 
             {/* Type toggle */}
@@ -175,28 +183,63 @@ export default function AddModal({ open, onClose }) {
               </div>
             </div>
 
-            {/* Cycle + Date */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div>
-                <label className="text-xs text-white/50 font-semibold uppercase tracking-wider block mb-2">Cycle</label>
-                <div className="relative">
-                  <select
-                    className="select-field"
-                    value={form.cycle}
-                    onChange={e => set('cycle', e.target.value)}
-                  >
-                    {CYCLES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-                  </select>
+            {/* Config: Status, Cycle, Date */}
+            <div className={`grid gap-3 mb-6 ${type === 'expense' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {type === 'expense' && (
+                <div>
+                  <label className="text-xs text-white/50 font-semibold uppercase tracking-wider block mb-2">Status</label>
+                  <div className="relative">
+                    <select className="select-field" value={form.status} onChange={e => set('status', e.target.value)}>
+                      <option value="Paid">Paid</option>
+                      <option value="Planned">Planned</option>
+                    </select>
+                  </div>
                 </div>
+              )}
+              <div>
+                {type === 'expense' ? (
+                  <>
+                    <label className="text-xs text-white/50 font-semibold uppercase tracking-wider block mb-2">Frequency</label>
+                    <div className="relative">
+                      <select
+                        className="select-field"
+                        value={form.cycle}
+                        onChange={e => set('cycle', e.target.value)}
+                      >
+                        <option value="one-time">None / One-time</option>
+                        {CYCLES.filter(c => c !== 'one-time').map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+           
+                  <div className="pt-5">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 rounded bg-white/5 border-white/10 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 transition-all cursor-pointer"
+                        checked={form.cycle !== 'one-time'}
+                        onChange={e => set('cycle', e.target.checked ? 'monthly' : 'one-time')}
+                      />
+                      <span className="text-sm text-white/70 font-semibold">Recurring Income</span>
+                    </label>
+                    <p className="text-[10px] text-white/40 mt-1.5 ml-8">Check this only if you receive this money every month.</p>
+                  </div>
+                )}
               </div>
               <div>
-                <label className="text-xs text-white/50 font-semibold uppercase tracking-wider block mb-2">Date</label>
+                <label className="text-xs text-white/50 font-semibold uppercase tracking-wider block mb-2">
+                  {type === 'income' ? 'Date Received' : (form.status === 'Planned' && type === 'expense' ? 'Target Date' : 'Date')}
+                </label>
                 <input
                   className="input-field"
                   type="date"
                   value={form.date}
                   onChange={e => set('date', e.target.value)}
                 />
+                {new Date(form.date) > new Date() && (
+                  <p className="text-[10px] text-white/40 mt-1.5 ml-1">This will be added to your future balance.</p>
+                )}
               </div>
             </div>
 
@@ -208,7 +251,7 @@ export default function AddModal({ open, onClose }) {
               </div>
             )}
 
-            {/* Submit */}
+             {/* Submit */}
             <motion.button
               className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold"
               onClick={handleSubmit}
@@ -222,6 +265,7 @@ export default function AddModal({ open, onClose }) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

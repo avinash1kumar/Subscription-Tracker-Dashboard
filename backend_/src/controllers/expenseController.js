@@ -22,7 +22,10 @@ const getExpenses = async (req, res, next) => {
     if (upcoming === 'true') {
       const cutoff = new Date()
       cutoff.setDate(cutoff.getDate() + Number(days))
-      filter.nextBilling = { $gte: new Date(), $lte: cutoff }
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      filter.status = 'Planned'
+      filter.date = { $gte: today, $lte: cutoff }
     }
 
     const total = await Expense.countDocuments(filter)
@@ -111,8 +114,8 @@ const cancelExpense = async (req, res, next) => {
 const getExpenseAnalytics = async (req, res, next) => {
   try {
     const userId = req.user._id
-    const baseMatch = { user: userId, isActive: true, isCancelled: false }
-
+    const baseMatch = { user: userId, isActive: true, isCancelled: false, status: 'Paid' }
+    const upcomingMatch = { user: userId, isActive: true, isCancelled: false, status: 'Planned' }
     // By category
     const byCategory = await Expense.aggregate([
       { $match: baseMatch },
@@ -165,9 +168,11 @@ const getExpenseAnalytics = async (req, res, next) => {
     // Upcoming in 7 days
     const sevenDaysLater = new Date()
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const upcomingCount = await Expense.countDocuments({
-      ...baseMatch,
-      nextBilling: { $gte: new Date(), $lte: sevenDaysLater },
+      ...upcomingMatch,
+      date: { $gte: today, $lte: sevenDaysLater },
     })
 
     return sendSuccess(res, {
@@ -191,7 +196,8 @@ const getDashboardSummary = async (req, res, next) => {
   try {
     const Income = require('../models/Income')
     const userId = req.user._id
-    const baseExpFilter = { user: userId, isActive: true, isCancelled: false }
+    const baseExpFilter = { user: userId, isActive: true, isCancelled: false, status: 'Paid' }
+    const upcomingExpFilter = { user: userId, isActive: true, isCancelled: false, status: 'Planned' }
     const baseIncFilter = { user: userId, isActive: true }
 
     const [incSummary] = await Income.aggregate([
@@ -212,10 +218,12 @@ const getDashboardSummary = async (req, res, next) => {
     // Upcoming bills (next 7 days)
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() + 7)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const upcomingBills = await Expense.find({
-      ...baseExpFilter,
-      nextBilling: { $gte: new Date(), $lte: cutoff },
-    }).sort('nextBilling').limit(5)
+      ...upcomingExpFilter,
+      date: { $gte: today, $lte: cutoff },
+    }).sort('date').limit(5)
 
     // Recent transactions (last 10)
     const recentIncome = await Income.find(baseIncFilter).sort('-date').limit(5)

@@ -27,11 +27,15 @@ const expenseSchema = new mongoose.Schema(
         'Health', 'Professional', 'Food', 'Travel', 'Other',
       ],
     },
+    status: {
+      type: String,
+      enum: ['Paid', 'Planned'],
+      default: 'Paid',
+    },
     cycle: {
       type: String,
-      required: true,
       enum: ['monthly', 'yearly', 'weekly', 'quarterly', 'one-time'],
-      default: 'monthly',
+      default: 'one-time',
     },
     date: {
       type: Date,

@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts'
 import { Trash2, TrendingUp, DollarSign, Repeat, Star } from 'lucide-react'
 import { useApp } from '../content/AppContext'
-import { fmt, fmtShort, CATEGORY_COLORS } from '../utils/helpers'
+import { fmt, fmtShort, CATEGORY_COLORS, formatDate } from '../utils/helpers'
 import clsx from 'clsx'
 
 const CYCLE_COLORS = { monthly: '#a5b4fc', yearly: '#67e8f9', weekly: '#86efac', quarterly: '#fcd34d', 'one-time': '#f9a8d4' }
@@ -22,8 +22,22 @@ export default function Income() {
     amount: income.filter(i => i.category === cat).reduce((s, i) => s + i.amount, 0),
   })).sort((a, b) => b.amount - a.amount)
 
-  const monthlyIncome = income.filter(i => i.cycle === 'monthly').reduce((s, i) => s + i.amount, 0)
-  const oneTimeIncome = income.filter(i => i.cycle === 'one-time').reduce((s, i) => s + i.amount, 0)
+  const isTodayDate = (dateStr) => {
+    const d = new Date(dateStr)
+    const today = new Date()
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()
+  }
+
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+
+  const currentMonthIncome = income.filter(i => {
+    const d = new Date(i.date)
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  }).reduce((s, i) => s + i.amount, 0)
+
+  const monthlyRecurring = income.filter(i => i.cycle !== 'one-time').reduce((s, i) => s + i.amount, 0)
   const passiveIncome = income.filter(i => ['Passive', 'Investment'].includes(i.category)).reduce((s, i) => s + i.amount, 0)
 
   return (
@@ -31,8 +45,8 @@ export default function Income() {
       {/* Top stat row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Income', value: fmtShort(totalIncome), icon: TrendingUp, color: 'from-emerald-500/40 to-teal-500/30', iconColor: 'text-emerald-300' },
-          { label: 'Monthly Recurring', value: fmtShort(monthlyIncome), icon: Repeat, color: 'from-violet-500/40 to-purple-500/30', iconColor: 'text-violet-300' },
+          { label: 'Total Income (This Month)', value: fmtShort(currentMonthIncome), icon: TrendingUp, color: 'from-emerald-500/40 to-teal-500/30', iconColor: 'text-emerald-300' },
+          { label: 'Monthly Recurring', value: fmtShort(monthlyRecurring), icon: Repeat, color: 'from-violet-500/40 to-purple-500/30', iconColor: 'text-violet-300' },
           { label: 'Passive Income', value: fmtShort(passiveIncome), icon: Star, color: 'from-amber-500/40 to-orange-500/30', iconColor: 'text-amber-300' },
         ].map(({ label, value, icon: Icon, color, iconColor }, i) => (
           <motion.div key={label}
@@ -66,8 +80,9 @@ export default function Income() {
                 contentStyle={{ background: 'rgba(128, 125, 164, 0.95)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
               />
               <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                <LabelList dataKey="amount" position="top" fill="rgba(255,255,255,0.7)" fontSize={10} formatter={(v) => fmtShort(v)} />
                 {catData.map((entry, i) => (
-                  <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#1e422b42'} /> // ! to change the Bar color
+                  <Cell key={i} fill={CATEGORY_COLORS[entry.name] || '#1e422b42'} />
                 ))}
               </Bar>
             </BarChart>
@@ -119,7 +134,7 @@ export default function Income() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold text-white truncate">{item.name}</div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-white/40 text-xs">{item.date}</span>
+                      <span className="text-white/40 text-xs">{isTodayDate(item.date) ? 'Today' : formatDate(item.date)}</span>
                       <span className="w-px h-3 bg-white/10" />
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                         style={{ background: 'rgba(16,185,129,0.15)', color: '#38ef7d' }}>
@@ -127,12 +142,17 @@ export default function Income() {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-emerald-400 font-bold font-mono text-sm">+{fmt(item.amount)}</div>
-                    <span className="text-[10px] capitalize"
-                      style={{ color: CYCLE_COLORS[item.cycle] || 'rgba(255,255,255,0.4)' }}>
-                      {item.cycle}
-                    </span>
+                  <div className="text-right flex flex-col items-end justify-center flex-shrink-0 gap-1.5">
+                    <div className="text-emerald-400 font-bold font-mono text-sm leading-none">+{fmt(item.amount)}</div>
+                    {item.cycle === 'one-time' ? (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-500/20 text-slate-300 uppercase tracking-wider leading-none">
+                        One-time
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 uppercase tracking-wider leading-none">
+                        Monthly
+                      </span>
+                    )}
                   </div>
                   <button
                     className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0"

@@ -302,11 +302,16 @@ export default function Settings() {
   const totalItems = income.length + expenses.length + subscriptions.length
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl pt-6">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="font-display font-bold text-white text-2xl">Settings</h1>
-        <p className="text-white/40 text-xs mt-1">Manage your account and preferences</p>
+        {/* <h1 className="font-display font-bold text-white text-2xl">Settings</h1> */}
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold mb-1.5">
+          <span className="text-white/30">Home</span>
+          <span className="text-white/20">/</span>
+          <span className="text-violet-400">Settings</span>
+        </div>
+        <p className="text-slate-400/80 text-xs font-medium tracking-wide mt-1">Manage your account and preferences</p>
       </div>
 
       {/* ── Profile card ───────────────────────────────────────────────── */}

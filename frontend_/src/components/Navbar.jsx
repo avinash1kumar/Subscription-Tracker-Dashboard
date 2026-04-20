@@ -13,11 +13,15 @@ const PAGE_TITLES = {
 }
 
 export default function Navbar({ onMenuClick, onAddClick }) {
-  const { activePage, setActivePage, subscriptions } = useApp()
+  const { activePage, setActivePage, subscriptions, notifsRead, notifsDeleted } = useApp()
 
   // Unread notification badge count — bills due within 7 days
   const urgentCount = (subscriptions || []).filter(s => {
     if (s.status !== 'active' || !s.nextBilling) return false
+    // Skip if user has already read or deleted this notification insight
+    const notifId = `sub-bill-${s._id || s.id}`
+    if (notifsDeleted?.has(notifId) || notifsRead?.has(notifId)) return false
+    
     const today  = new Date(); today.setHours(0,0,0,0)
     const bill   = new Date(s.nextBilling); bill.setHours(0,0,0,0)
     const days   = Math.ceil((bill - today) / 86400000)
@@ -70,15 +74,17 @@ export default function Navbar({ onMenuClick, onAddClick }) {
         </button>
 
         {/* Add button */}
-        <motion.button
-          className="btn-primary flex items-center gap-2 px-4 py-2 text-sm font-semibold"
-          onClick={onAddClick}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Plus size={15} />
-          <span>Add New</span>
-        </motion.button>
+        {!['subscriptions', 'notifications', 'settings'].includes(activePage) && (
+          <motion.button
+            className="btn-primary flex items-center gap-2 px-4 py-2 text-sm font-semibold"
+            onClick={onAddClick}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Plus size={15} />
+            <span>Add New</span>
+          </motion.button>
+        )}
       </div>
     </motion.header>
   )

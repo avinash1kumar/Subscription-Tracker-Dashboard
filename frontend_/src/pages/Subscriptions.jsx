@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Trash2, Pencil, RotateCcw,
   PauseCircle, Calendar, TrendingDown, Zap,
-  LayoutGrid, List, AlertTriangle,
+  LayoutGrid, List, AlertTriangle, CheckCircle
 } from 'lucide-react'
 import { useApp } from '../content/AppContext'
-import { fmt, getDaysUntil, CATEGORY_COLORS } from '../utils/helpers'
+import { fmt, getDaysUntil, CATEGORY_COLORS, formatDate } from '../utils/helpers'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -104,16 +105,15 @@ function SubModal({ open, onClose, onSave, editTarget, saving }) {
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+        className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-[9999]"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={e => e.target === e.currentTarget && onClose()}
       >
         <motion.div
-          className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl"
+          className="relative w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto rounded-3xl"
           style={{
             background: 'linear-gradient(135deg, rgba(17,17,28,0.99), rgba(12,10,25,0.99))',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -124,27 +124,26 @@ function SubModal({ open, onClose, onSave, editTarget, saving }) {
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         >
+          {/* Absolute Close Button */}
+          <button onClick={onClose} className="absolute top-4 right-4 z-50 w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:bg-white/10 transition-colors">
+            ✕
+          </button>
+
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
-                {form.emoji}
-              </div>
-              <div>
-                <h2 className="font-display font-bold text-white text-lg leading-none">
-                  {editTarget ? 'Edit Subscription' : 'Add Subscription'}
-                </h2>
-                <p className="text-white/40 text-xs mt-0.5">Fill in the details below</p>
-              </div>
+          <div className="flex items-center gap-3 px-6 md:px-8 py-5 pr-12" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
+              {form.emoji}
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white transition-colors"
-              style={{ background: 'rgba(255,255,255,0.06)' }}>
-              ✕
-            </button>
+            <div>
+              <h2 className="font-display font-bold text-white text-lg leading-tight">
+                {editTarget ? 'Edit Subscription' : 'Add Subscription'}
+              </h2>
+              <p className="text-white/40 text-xs mt-0.5">Fill in the details below</p>
+            </div>
           </div>
 
-          <div className="p-6 space-y-5">
+          <div className="p-6 md:p-8 space-y-5">
             {/* Emoji picker */}
             <div>
               <label className="text-xs font-semibold text-white/40 uppercase tracking-wider block mb-2">Icon</label>
@@ -231,8 +230,8 @@ function SubModal({ open, onClose, onSave, editTarget, saving }) {
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition-colors"
+          <div className="flex gap-3 px-6 md:px-8 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+            <button onClick={onClose} className="py-3 px-4 rounded-xl text-sm font-semibold text-white/40 hover:text-white transition-colors flex-shrink-0"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
               Cancel
             </button>
@@ -247,7 +246,8 @@ function SubModal({ open, onClose, onSave, editTarget, saving }) {
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 
@@ -284,7 +284,7 @@ function DeleteConfirm({ name, onConfirm, onCancel }) {
 export default function Subscriptions() {
   const {
     subscriptions, addSubscription, updateSubscription,
-    deleteSubscription, toggleSubscriptionStatus,
+    deleteSubscription, toggleSubscriptionStatus, addExpense,
   } = useApp()
 
   const [modalOpen,    setModalOpen]    = useState(false)
@@ -308,6 +308,11 @@ export default function Subscriptions() {
 
   const upcomingCount = useMemo(
     () => activeSubs.filter(s => s.nextBilling && getDaysUntil(s.nextBilling) <= 7 && getDaysUntil(s.nextBilling) >= 0).length,
+    [activeSubs]
+  )
+
+  const todayCount = useMemo(
+    () => activeSubs.filter(s => s.nextBilling && getDaysUntil(s.nextBilling) === 0).length,
     [activeSubs]
   )
 
@@ -364,13 +369,53 @@ export default function Subscriptions() {
     catch (err) { setApiError(err.message) }
   }
 
+  const handlePay = async (sub) => {
+    try {
+      setApiError(null)
+      const d = new Date(sub.nextBilling)
+      if (sub.cycle === 'monthly') d.setMonth(d.getMonth() + 1)
+      else if (sub.cycle === 'yearly') d.setFullYear(d.getFullYear() + 1)
+      else if (sub.cycle === 'quarterly') d.setMonth(d.getMonth() + 3)
+      else if (sub.cycle === 'weekly') d.setDate(d.getDate() + 7)
+      
+      const payload = { ...sub, nextBilling: d.toISOString() }
+      
+      // Update subscription FIRST so if validation fails, nothing happens
+      await updateSubscription(sub._id || sub.id, payload)
+
+      const validExpenseCategories = ['Entertainment', 'Music', 'Tech', 'Design', 'Health', 'Professional', 'Food', 'Travel', 'Other']
+      const expCategory = validExpenseCategories.includes(sub.category) ? sub.category : 'Other'
+      const rawString = String(sub.price).replace(/[^\d.-]/g, '')
+      const numPrice = Number(rawString) || 0
+      
+      await addExpense({
+        name: sub.name,
+        amount: numPrice,
+        category: expCategory,
+        date: new Date().toISOString().split('T')[0],
+        status: 'Paid',
+        cycle: 'one-time'
+      })
+      
+    } catch (err) {
+      console.error('Payment Auto-Update Exception:', err.errors || err)
+      setApiError('Auto-payment update failed: ' + (err.message || 'Validation failed'))
+      setTimeout(() => setApiError(null), 3000)
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-display font-bold text-white text-2xl">Subscriptions</h1>
-          <p className="text-white/40 text-xs mt-0.5">
+          {/* <h1 className="font-display font-bold text-white text-2xl">Subscriptions</h1> */}
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold mb-1.5">
+            <span className="text-white/30">Home</span>
+            <span className="text-white/20">/</span>
+            <span className="text-violet-400">Subscriptions</span>
+          </div>
+          <p className="text-slate-400/80 text-xs font-medium tracking-wide">
             {subscriptions.length} total · {activeSubs.length} active
           </p>
         </div>
@@ -423,7 +468,9 @@ export default function Subscriptions() {
         >
           <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
           <p className="text-amber-300 text-sm font-medium">
-            You have <span className="font-bold">{upcomingCount}</span> subscription{upcomingCount > 1 ? 's' : ''} due within the next 7 days.
+            {todayCount > 0 
+              ? `Alert: ${todayCount} subscription${todayCount > 1 ? 's are' : ' is'} due TODAY!`
+              : `You have ${upcomingCount} subscription${upcomingCount > 1 ? 's' : ''} due within the next 7 days.`}
           </p>
         </motion.div>
       )}
@@ -522,6 +569,7 @@ export default function Subscriptions() {
                   {filtered.map((sub, i) => {
                     const monthly      = toMonthly(sub.price, sub.cycle)
                     const isCancelled  = sub.status === 'cancelled'
+                    const isDueToday   = getDaysUntil(sub.nextBilling) === 0
                     const rowBg        = i % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent'
                     return (
                       <motion.tr key={sub._id || sub.id}
@@ -564,8 +612,8 @@ export default function Subscriptions() {
                         {/* Next Billing */}
                         <td className="px-5 py-4">
                           <div className="flex flex-col gap-1">
-                            <span className="text-sm text-white/70">
-                              {sub.nextBilling ? new Date(sub.nextBilling).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—'}
+                            <span className={isDueToday ? "text-sm text-rose-500 font-bold" : "text-sm text-white/70"}>
+                              {sub.nextBilling ? formatDate(sub.nextBilling) : '—'}
                             </span>
                             <UrgencyBadge dateStr={sub.nextBilling} status={sub.status} />
                           </div>
@@ -583,6 +631,13 @@ export default function Subscriptions() {
                         {/* Actions */}
                         <td className="px-5 py-4">
                           <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {!isCancelled && (
+                              <button onClick={() => handlePay(sub)} title="Mark as Paid"
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-400 hover:bg-emerald-400/20 transition-colors"
+                                style={{ background: 'rgba(16,185,129,0.1)' }}>
+                                <CheckCircle size={15} strokeWidth={2.5} />
+                              </button>
+                            )}
                             <button onClick={() => openEdit(sub)} title="Edit"
                               className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-blue-400 transition-colors"
                               style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -654,16 +709,23 @@ export default function Subscriptions() {
                   </div>
 
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-1.5 text-white/40">
+                    <div className={isDueToday ? "flex items-center gap-1.5 text-rose-500 font-bold" : "flex items-center gap-1.5 text-white/40"}>
                       <Calendar size={12} />
                       <span className="text-xs">
-                        {sub.nextBilling ? new Date(sub.nextBilling).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—'}
+                        {sub.nextBilling ? formatDate(sub.nextBilling) : '—'}
                       </span>
                     </div>
                     <UrgencyBadge dateStr={sub.nextBilling} status={sub.status} />
                   </div>
 
                   <div className="flex gap-2">
+                    {!isCancelled && (
+                      <button onClick={() => handlePay(sub)} title="Mark as Paid"
+                        className="w-10 py-2 rounded-xl flex items-center justify-center text-emerald-400 transition-colors flex-shrink-0"
+                        style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                        <CheckCircle size={16} />
+                      </button>
+                    )}
                     <button onClick={() => openEdit(sub)} className="flex-1 py-2 rounded-xl text-xs font-semibold text-blue-400 transition-colors"
                       style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
                       ✎ Edit

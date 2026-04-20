@@ -10,7 +10,7 @@ import {
 import { useApp } from '../content/AppContext'
 import { getDaysUntil, fmt } from '../utils/helpers'
 
-// ── Generate smart notifications from real app data ──────────────────────────
+// ── Generate smart notifications from real app data 
 function buildNotifications(income, expenses, subscriptions) {
   const items = []
   const now   = new Date()
@@ -220,7 +220,7 @@ function NotificationCard({ notif, onMarkRead, onDelete }) {
 
 // ── Main Notifications page ───────────────────────────────────────────────────
 export default function Notifications() {
-  const { income, expenses, subscriptions } = useApp()
+  const { income, expenses, subscriptions, notifsRead: readIds, setNotifsRead: setReadIds, notifsDeleted: deleted, setNotifsDeleted: setDeleted } = useApp()
 
   // Build notifications from real data
   const baseNotifs = useMemo(
@@ -228,8 +228,6 @@ export default function Notifications() {
     [income, expenses, subscriptions]
   )
 
-  const [readIds,  setReadIds]  = useState(new Set())
-  const [deleted,  setDeleted]  = useState(new Set())
   const [filter,   setFilter]   = useState('all')   // urgency filter
   const [catTab,   setCatTab]   = useState('all')   // category tab
   const [showRead, setShowRead] = useState(true)
@@ -260,12 +258,17 @@ export default function Notifications() {
   const refresh     = ()   => { setReadIds(new Set()); setDeleted(new Set()) }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl pt-6">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-display font-bold text-white text-2xl">Notifications</h1>
+            {/* <h1 className="font-display font-bold text-white text-2xl">Notifications</h1> */}
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold mb-1">
+              <span className="text-white/30">Home</span>
+              <span className="text-white/20">/</span>
+              <span className="text-violet-400">Notifications</span>
+            </div>
             {unreadCount > 0 && (
               <motion.span
                 className="px-2.5 py-0.5 rounded-full text-xs font-bold text-white"
@@ -276,7 +279,7 @@ export default function Notifications() {
               </motion.span>
             )}
           </div>
-          <p className="text-white/40 text-xs mt-1">
+          <p className="text-slate-400/80 text-xs font-medium tracking-wide mt-1">
             Smart alerts based on your financial data
           </p>
         </div>

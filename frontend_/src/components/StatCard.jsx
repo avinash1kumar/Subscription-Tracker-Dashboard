@@ -1,8 +1,8 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Info } from 'lucide-react'
 
-export default function StatCard({ title, value, sub, icon: Icon, gradient, trend, trendValue, delay = 0 }) {
+export default function StatCard({ title, value, sub, icon: Icon, gradient, trend, trendValue, delay = 0, tooltip }) {
   const isPositiveTrend = trend === 'up'
 
   return (
@@ -31,7 +31,17 @@ export default function StatCard({ title, value, sub, icon: Icon, gradient, tren
 
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3">{title}</p>
+          <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            {title}
+            {tooltip && (
+              <span className="relative group cursor-help">
+                <Info size={12} className="text-white/40 hover:text-white/80 transition-colors" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 text-center leading-tight shadow-xl border border-white/10 normal-case tracking-normal">
+                  {tooltip}
+                </span>
+              </span>
+            )}
+          </p>
           <motion.div
             className="text-3xl font-display font-bold text-white mb-1"
             initial={{ opacity: 0 }}

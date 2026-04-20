@@ -12,9 +12,25 @@ export default function Expenses() {
   const [sortBy, setSortBy] = useState('date')
 
   const categories = [...new Set(expenses.map(e => e.category))]
-  const monthlyExpenses = expenses.filter(e => e.cycle === 'monthly').reduce((s, e) => s + e.amount, 0)
-  const yearlyExpenses = expenses.filter(e => e.cycle === 'yearly').reduce((s, e) => s + e.amount, 0)
-  const upcomingCount = expenses.filter(e => e.nextBilling && getDaysUntil(e.nextBilling) <= 7).length
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+  const currentMonthName = now.toLocaleString('default', { month: 'long' })
+
+  const totalPotential = expenses.reduce((s, e) => s + e.amount, 0) || 1
+  const monthlyExpenses = expenses.filter(e => {
+    if (e.status !== 'Paid') return false
+    const d = new Date(e.date)
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+  }).reduce((s, e) => s + e.amount, 0)
+
+  const yearlyExpenses = expenses.filter(e => {
+    if (e.status !== 'Paid') return false
+    const d = new Date(e.date)
+    return d.getFullYear() === currentYear
+  }).reduce((s, e) => s + e.amount, 0)
+
+  const plannedTotal = expenses.filter(e => e.status === 'Planned').reduce((s, e) => s + e.amount, 0)
 
   let filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
   filtered = [...filtered].sort((a, b) => {
@@ -23,20 +39,25 @@ export default function Expenses() {
     return new Date(b.date) - new Date(a.date)
   })
 
-  const radarData = categories.slice(0, 6).map(cat => ({
-    category: cat,
-    amount: expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0),
-  }))
+
+  const radarData = categories.map(cat => {
+    const amt = expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)
+    return {
+      category: cat,
+      amount: amt,
+      percent: (amt / totalPotential) * 100
+    }
+  })
 
   return (
     <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Spent', value: fmtShort(totalExpenses), icon: TrendingDown, bg: 'rgba(239,68,68,0.2)', border: 'rgba(239,68,68,0.3)', color: '#f87171' },
-          { label: 'Monthly', value: fmtShort(monthlyExpenses), icon: Clock, bg: 'rgba(99,102,241,0.2)', border: 'rgba(99,102,241,0.3)', color: '#a5b4fc' },
-          { label: 'Yearly', value: fmtShort(yearlyExpenses), icon: Shield, bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.25)', color: '#67e8f9' },
-          { label: 'Due Soon', value: upcomingCount, icon: AlertTriangle, bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.25)', color: '#fcd34d' },
+          { label: 'Total Spent (All Time)', value: fmtShort(totalExpenses), icon: TrendingDown, bg: 'rgba(239,68,68,0.2)', border: 'rgba(239,68,68,0.3)', color: '#f87171' },
+          { label: 'Spent this Month', value: fmtShort(monthlyExpenses), icon: Clock, bg: 'rgba(99,102,241,0.2)', border: 'rgba(99,102,241,0.3)', color: '#a5b4fc' },
+          { label: `Spent in ${currentYear}`, value: fmtShort(yearlyExpenses), icon: Shield, bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.25)', color: '#67e8f9' },
+          { label: 'Due Soon (Planned)', value: fmtShort(plannedTotal), icon: AlertTriangle, bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.25)', color: '#fcd34d' },
         ].map(({ label, value, icon: Icon, bg, border, color }, i) => (
           <motion.div key={label}
             className="rounded-2xl p-4"
@@ -68,15 +89,15 @@ export default function Expenses() {
                 formatter={(v) => [fmt(v), 'Amount']}
                 contentStyle={{ background: 'rgba(20,16,60,0.95)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
               />
-              <Radar name="Expenses" dataKey="amount" stroke="#a855f7" fill="#a855f7" fillOpacity={0.25} strokeWidth={2} />
+              <Radar name="Expenses" dataKey="percent" stroke="#a855f7" fill="#a855f7" fillOpacity={0.25} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
 
           {/* Category legend */}
           <div className="grid grid-cols-2 gap-1.5 mt-2">
-            {categories.slice(0, 6).map(cat => {
+            {categories.map(cat => {
               const amt = expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0)
-              const pct = totalExpenses > 0 ? Math.round((amt / totalExpenses) * 100) : 0
+              const pct = totalPotential > 0 ? Math.round((amt / totalPotential) * 100) : 0
               return (
                 <div key={cat} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: CATEGORY_COLORS[cat] || '#6b7280' }} />
@@ -128,8 +149,12 @@ export default function Expenses() {
               {filtered.length === 0 ? (
                 <div className="text-center py-10 text-white/30 text-sm">No expense entries</div>
               ) : filtered.map((item, i) => {
-                const days = item.nextBilling ? getDaysUntil(item.nextBilling) : null
+                const isPlanned = item.status === 'Planned'
+                const days = isPlanned ? getDaysUntil(item.date) : null
                 const urgency = days !== null ? (days <= 3 ? 'urgent' : days <= 7 ? 'soon' : 'ok') : null
+
+                const amountColor = isPlanned ? 'text-yellow-400' : 'text-gray-200'
+
                 return (
                   <motion.div key={item.id}
                     className="flex items-center gap-3 p-3 rounded-2xl table-row-hover group"
@@ -150,18 +175,20 @@ export default function Expenses() {
                           style={{ background: `${CATEGORY_COLORS[item.category]}22`, color: CATEGORY_COLORS[item.category] || 'rgba(255,255,255,0.5)' }}>
                           {item.category}
                         </span>
-                        {days !== null && (
-                          <span className={clsx('text-[10px] font-semibold',
-                            urgency === 'urgent' ? 'text-rose-400' : urgency === 'soon' ? 'text-amber-400' : 'text-emerald-400'
+                        {isPlanned ? (
+                          <span className={clsx('text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                            urgency === 'urgent' ? 'bg-amber-400/20 text-amber-400' : 'bg-orange-400/20 text-orange-400'
                           )}>
-                            {days <= 0 ? 'Due today!' : `${days}d left`}
+                            {days <= 0 ? 'Due today!' : `${days}d left (Planned)`}
                           </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">Paid</span>
                         )}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-rose-400 font-bold font-mono text-sm">-{fmt(item.amount)}</div>
-                      <span className="text-[10px] text-white/30 capitalize">{item.cycle}</span>
+                      <div className={`font-bold font-mono text-sm ${amountColor}`}>-{fmt(item.amount)}</div>
+                      <span className="text-[10px] text-white/30 capitalize">{isPlanned ? 'Planned' : new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                     </div>
                     <button
                       className="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0"
